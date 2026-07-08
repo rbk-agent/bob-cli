@@ -1,0 +1,12 @@
+{
+  "name": "bob",
+  "version": "0.1.0",
+  "description": "Debian/Ubuntu system information CLI — JSON or pretty tables, with an interactive mode",
+  "bin": { "bob": "./index.js" },
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test" },
+  "dependencies": {
+    "commander": "^14.0.3",
+    "@inquirer/prompts": "^7.2.0"
+  }
+}
