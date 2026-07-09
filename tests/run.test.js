@@ -15,6 +15,11 @@ test('run resolves ok:false for a missing binary instead of throwing', async () 
   assert.strictEqual(res.stdout, '');
 });
 
+test('run resolves ok:false for malformed args instead of rejecting', async () => {
+  const res = await run(null);
+  assert.strictEqual(res.ok, false);
+});
+
 test('hasCommand is true for sh and false for a bogus name', async () => {
   assert.strictEqual(await hasCommand('sh'), true);
   assert.strictEqual(await hasCommand('definitely-not-a-real-binary-xyz'), false);
