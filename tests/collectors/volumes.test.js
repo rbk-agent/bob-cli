@@ -21,9 +21,10 @@ test('parse flattens the block-device tree with nesting level', () => {
     name: 'sda', size: 256060514304, type: 'disk',
     fstype: null, mountpoint: null, model: 'Samsung SSD', level: 0,
   });
-  assert.strictEqual(data[1].name, 'sda1');
-  assert.strictEqual(data[1].level, 1);
-  assert.strictEqual(data[1].mountpoint, '/');
+  assert.deepStrictEqual(data[1], {
+    name: 'sda1', size: 254900000000, type: 'part',
+    fstype: 'ext4', mountpoint: '/', model: null, level: 1,
+  });
 });
 
 test('table is lean by default and wide with verbose', () => {
@@ -33,4 +34,5 @@ test('table is lean by default and wide with verbose', () => {
   assert.strictEqual(lean.rows[1][0], '  sda1'); // indented by level
   const verbose = volumes.table(data, { verbose: true });
   assert.deepStrictEqual(verbose.head, ['NAME', 'SIZE', 'TYPE', 'FSTYPE', 'MOUNTPOINT', 'MODEL']);
+  assert.deepStrictEqual(verbose.rows[1], ['  sda1', '237.4 GB', 'part', 'ext4', '/', '-']);
 });
