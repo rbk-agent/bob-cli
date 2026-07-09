@@ -7,7 +7,8 @@ function formatBytes(n) {
     bytes /= 1024;
     i++;
   }
-  const val = i === 0 ? String(bytes) : bytes.toFixed(1);
+  let val = i === 0 ? String(bytes) : bytes.toFixed(1);
+  if (val === '1024.0' && i < units.length - 1) { val = '1.0'; i++; }
   return `${val} ${units[i]}`;
 }
 
@@ -16,7 +17,7 @@ function renderTable({ head, rows }) {
     Math.max(String(h).length, ...rows.map((r) => String(r[i] ?? '').length))
   );
   const line = (cells) =>
-    '│ ' + cells.map((c, i) => String(c ?? '').padEnd(widths[i])).join(' │ ') + ' │';
+    '│ ' + widths.map((w, i) => String(cells[i] ?? '').padEnd(w)).join(' │ ') + ' │';
   const sep = (l, m, r) => l + widths.map((w) => '─'.repeat(w + 2)).join(m) + r;
   const out = [sep('┌', '┬', '┐'), line(head), sep('├', '┼', '┤')];
   for (const r of rows) out.push(line(r));

@@ -22,6 +22,17 @@ test('renderTable handles an empty row set', () => {
   assert.strictEqual(out.split('\n').length, 4); // top, head, sep, bottom
 });
 
+test('renderTable pads ragged rows to the full column count', () => {
+  const out = renderTable({ head: ['A', 'B'], rows: [['1']] });
+  const lines = out.split('\n');
+  // every border/content line must be the same width
+  assert.strictEqual(new Set(lines.map((l) => l.length)).size, 1);
+});
+
+test('formatBytes rolls over at a rounding boundary', () => {
+  assert.strictEqual(formatBytes(1048575), '1.0 MB');
+});
+
 test('jsonError wraps a message', () => {
   assert.deepStrictEqual(jsonError('nope', { code: 1 }), { error: 'nope', code: 1 });
 });
