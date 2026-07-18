@@ -22,7 +22,7 @@ async function emitOne(collector, opts) {
     process.exitCode = 1;
     return;
   }
-  emit(`${collector.title}\n${renderTable(collector.table(res.data, { verbose: opts.verbose }))}`, opts);
+  emit(`${collector.title}\n${renderTable(collector.table(res.data, opts))}`, opts);
 }
 
 async function emitAll(opts) {
@@ -40,7 +40,7 @@ async function emitAll(opts) {
     const res = await c.collect();
     blocks.push(
       res.available
-        ? `${c.title}\n${renderTable(c.table(res.data, { verbose: opts.verbose }))}`
+        ? `${c.title}\n${renderTable(c.table(res.data, opts))}`
         : `${c.title}\n(unavailable: ${res.reason})`
     );
   }
@@ -57,8 +57,14 @@ program.name('bob').description('Debian/Ubuntu system information').version('0.1
 program.option('-i, --interactive', 'launch the interactive menu');
 
 for (const c of collectors) {
-  addOpts(program.command(c.name).description(`Show ${c.title.toLowerCase()}`))
-    .action((opts) => emitOne(c, opts));
+  const cmd = addOpts(program.command(c.name).description(`Show ${c.title.toLowerCase()}`));
+  // Register collector-specific options (e.g. --list for software)
+  if (c.options) {
+    for (const [flags, desc] of c.options) {
+      cmd.option(flags, desc);
+    }
+  }
+  cmd.action((opts) => emitOne(c, opts));
 }
 addOpts(program.command('all').description('Show every category'))
   .action((opts) => emitAll(opts));
