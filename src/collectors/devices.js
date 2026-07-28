@@ -1,4 +1,41 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { run, hasCommand } = require('../run');
+
+// Read negotiated USB link speeds and device USB versions from sysfs. Returns a
+// Map keyed by `${busnum}:${devnum}` (which match lsusb's Bus/Device numbers)
+// to { speed, version } where speed is in Mbit/s and version is e.g. '3.20'.
+function readUsbSpeeds() {
+  const dir = '/sys/bus/usb/devices';
+  const map = new Map();
+  let entries;
+  try { entries = fs.readdirSync(dir); } catch { return map; }
+  for (const name of entries) {
+    const devPath = path.join(dir, name);
+    let busnum, devnum;
+    try {
+      busnum = fs.readFileSync(path.join(devPath, 'busnum'), 'utf8').trim();
+      devnum = fs.readFileSync(path.join(devPath, 'devnum'), 'utf8').trim();
+    } catch { continue; }
+    let speed;
+    let version;
+    try { speed = Number(fs.readFileSync(path.join(devPath, 'speed'), 'utf8').trim()); } catch {}
+    try { version = fs.readFileSync(path.join(devPath, 'version'), 'utf8').trim() || null; } catch {}
+    if (busnum && devnum) map.set(`${busnum}:${devnum}`, { speed, version });
+  }
+  return map;
+}
+
+// Human-readable link speed. Mbit/s input (from sysfs `speed`).
+//   5000 -> '5 Gb/s', 10000 -> '10 Gb/s', 480 -> '480 Mb/s', 12 -> '12 Mb/s'
+function formatSpeed(mbps) {
+  if (mbps == null || Number.isNaN(mbps)) return '-';
+  if (mbps >= 1000) {
+    const gbps = mbps / 1000;
+    return `${gbps % 1 === 0 ? gbps.toFixed(0) : gbps.toFixed(1)} Gb/s`;
+  }
+  return `${mbps} Mb/s`;
+}
 
 // Parse `lsusb` text output:
 //   Bus 002 Device 006: ID 5986:0366 Bison Electronics Inc. Integrated Camera
@@ -58,20 +95,21 @@ function table(data, { verbose = false } = {}) {
   const usb = data.usb || [];
   const pci = data.pci || [];
   const head = verbose
-    ? ['BUS/DEV', 'VENDOR:PRODUCT', 'DESCRIPTION', 'TYPE']
-    : ['DEVICE', 'DESCRIPTION'];
+    ? ['BUS/DEV', 'VENDOR:PRODUCT', 'DESCRIPTION', 'SPEED', 'TYPE']
+    : ['DEVICE', 'DESCRIPTION', 'SPEED'];
   const rows = [];
   for (const d of usb) {
     const id = `USB ${d.bus}:${d.device}`;
+    const speed = formatSpeed(d.speed);
     rows.push(verbose
-      ? [id, `${d.vendorId}:${d.productId}`, d.description ?? '-', 'USB']
-      : [id, d.description ?? '-']);
+      ? [id, `${d.vendorId}:${d.productId}`, d.description ?? '-', speed, 'USB']
+      : [id, d.description ?? '-', speed]);
   }
   for (const d of pci) {
     const id = `PCI ${d.slot}`;
     rows.push(verbose
-      ? [id, `${d.vendor ?? '-'}`, d.device ?? d.className ?? '-', 'PCI']
-      : [id, d.device ?? d.className ?? '-']);
+      ? [id, `${d.vendor ?? '-'}`, d.device ?? d.className ?? '-', '-', 'PCI']
+      : [id, d.device ?? d.className ?? '-', '-']);
   }
   return { head, rows };
 }
@@ -83,8 +121,20 @@ async function collect() {
   if (!usbRes.ok && !pciRes.ok) {
     return { available: false, reason: 'lsusb and lspci unavailable (install usbutils and pciutils)' };
   }
+  const usb = usbRes.ok ? parseUsb(usbRes.stdout) : [];
+  // Enrich USB devices with negotiated link speed / USB version from sysfs.
+  if (usb.length) {
+    const speeds = readUsbSpeeds();
+    for (const d of usb) {
+      const s = speeds.get(`${d.bus}:${d.device}`);
+      if (s) {
+        d.speed = s.speed; // Mbit/s, or undefined if unavailable
+        d.usbVersion = s.version;
+      }
+    }
+  }
   const data = {
-    usb: usbRes.ok ? parseUsb(usbRes.stdout) : [],
+    usb,
     pci: pciRes.ok ? parsePci(pciRes.stdout) : [],
   };
   if (data.usb.length === 0 && data.pci.length === 0) {
@@ -93,4 +143,4 @@ async function collect() {
   return { available: true, data };
 }
 
-module.exports = { name: 'devices', title: 'Devices', parseUsb, parsePci, table, collect };
+module.exports = { name: 'devices', title: 'Devices', parseUsb, parsePci, readUsbSpeeds, formatSpeed, table, collect };

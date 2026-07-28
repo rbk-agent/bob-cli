@@ -40,11 +40,35 @@ test('table combines USB and PCI devices', () => {
   const lean = devices.table(data, { verbose: false });
   assert.strictEqual(lean.rows.length, 5);
   assert.ok(lean.head.includes('DEVICE'));
+  assert.ok(lean.head.includes('SPEED'));
   assert.ok(lean.rows[0][0].startsWith('USB'));
+  // USB devices with no sysfs speed info render '-'
+  assert.strictEqual(lean.rows[0][2], '-');
 
   const verbose = devices.table(data, { verbose: true });
   assert.strictEqual(verbose.rows.length, 5);
-  assert.deepStrictEqual(verbose.head, ['BUS/DEV', 'VENDOR:PRODUCT', 'DESCRIPTION', 'TYPE']);
+  assert.deepStrictEqual(verbose.head, ['BUS/DEV', 'VENDOR:PRODUCT', 'DESCRIPTION', 'SPEED', 'TYPE']);
+});
+
+test('formatSpeed renders Mbit/s and Gbit/s values', () => {
+  assert.strictEqual(devices.formatSpeed(480), '480 Mb/s');
+  assert.strictEqual(devices.formatSpeed(12), '12 Mb/s');
+  assert.strictEqual(devices.formatSpeed(5000), '5 Gb/s');
+  assert.strictEqual(devices.formatSpeed(10000), '10 Gb/s');
+  assert.strictEqual(devices.formatSpeed(20000), '20 Gb/s');
+  assert.strictEqual(devices.formatSpeed(undefined), '-');
+  assert.strictEqual(devices.formatSpeed(NaN), '-');
+});
+
+test('table renders negotiated USB speed when present', () => {
+  const usb = devices.parseUsb(USB_FIXTURE);
+  // simulate sysfs enrichment for the SanDisk-style 5 Gb/s device
+  usb[2].speed = 5000;
+  usb[2].usbVersion = '3.20';
+  const lean = devices.table({ usb, pci: [] }, { verbose: false });
+  const row = lean.rows[2];
+  assert.strictEqual(row[0], 'USB 2:8');
+  assert.strictEqual(row[2], '5 Gb/s');
 });
 
 test('parseUsb handles empty output', () => {
