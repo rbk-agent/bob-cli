@@ -1,10 +1,37 @@
 {
-  "name": "bob",
+  "name": "@rbk-agent/bob",
   "version": "0.1.0",
-  "description": "Debian/Ubuntu system information CLI — JSON or pretty tables, with an interactive mode",
-  "bin": { "bob": "./index.js" },
-  "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test" },
+  "description": "Debian/Ubuntu system information CLI — outputs JSON or pretty tables, with an interactive mode",
+  "license": "MIT",
+  "author": "Richard <richard.be.jamin@gmail.com>",
+  "type": "commonjs",
+  "main": "./index.js",
+  "bin": {
+    "bob": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "docs/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "cli",
+    "debian",
+    "ubuntu",
+    "system",
+    "hardware",
+    "info",
+    "sysinfo",
+    "lshw",
+    "json",
+    "table"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
   "dependencies": {
     "commander": "^14.0.3",
     "@inquirer/prompts": "^7.2.0"
